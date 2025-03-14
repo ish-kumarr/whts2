@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { fetchTasks, fetchNotes, fetchImportantMessages } from "@/lib/api";
+import { analyzeTask, chatWithAI } from "@/lib/gemini";
 import { 
   Bot,
   Brain,
@@ -21,6 +22,8 @@ import {
   Tag,
   User,
   Mail,
+  Send,
+  Loader2,
   MessageCircle,
   Bell
 } from "lucide-react";
@@ -37,6 +40,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import ReactMarkdown from 'react-markdown';
 
 const container = {
   hidden: { opacity: 0 },
@@ -425,7 +431,7 @@ export default function DashboardPage() {
 
       {selectedTask && (
         <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-          <DialogContent className="sm:max-w-[600px]">
+          <DialogContent className="sm:max-w-[800px] h-[80vh]">
             <DialogHeader>
               <DialogTitle className="text-xl flex items-center gap-2">
                 <span>Task Details</span>
@@ -434,92 +440,228 @@ export default function DashboardPage() {
                 </Badge>
               </DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h3 className="text-lg font-medium">{selectedTask.task}</h3>
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <User className="h-4 w-4" />
-                  <span>From {selectedTask.from}</span>
+            <div className="flex h-full gap-6">
+              <div className="flex-1 overflow-y-auto">
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-medium">{selectedTask.task}</h3>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <User className="h-4 w-4" />
+                      <span>From {selectedTask.from}</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <Calendar className="h-4 w-4" />
+                        <span>Due Date</span>
+                      </div>
+                      <p className="text-muted-foreground">{selectedTask.deadline}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <Clock className="h-4 w-4" />
+                        <span>Due Time</span>
+                      </div>
+                      <p className="text-muted-foreground">{selectedTask.time}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <Tag className="h-4 w-4" />
+                        <span>Category</span>
+                      </div>
+                      <p className="text-muted-foreground">{selectedTask.category}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>Chat Type</span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        {selectedTask.isGroup ? 'Group Chat' : 'Direct Message'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <Mail className="h-4 w-4" />
+                      <span>Original Message</span>
+                    </div>
+                    <div className="rounded-lg bg-muted p-4">
+                      <p className="text-sm whitespace-pre-wrap">{selectedTask.snippet}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{selectedTask.reminded ? 'Reminder sent' : 'No reminder sent'}</span>
+                    </div>
+                    <span>Created {formatDistanceToNow(new Date(selectedTask.timestamp))} ago</span>
+                  </div>
+
+                  {selectedTask.links && selectedTask.links.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-1.5 text-sm font-medium">
+                        <LinkIcon className="h-4 w-4" />
+                        <span>Related Links</span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedTask.links.map((link: string, i: number) => (
+                          <a
+                            key={i}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                          >
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            <span>Link {i + 1}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Calendar className="h-4 w-4" />
-                    <span>Due Date</span>
-                  </div>
-                  <p className="text-muted-foreground">{selectedTask.deadline}</p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Clock className="h-4 w-4" />
-                    <span>Due Time</span>
-                  </div>
-                  <p className="text-muted-foreground">{selectedTask.time}</p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <Tag className="h-4 w-4" />
-                    <span>Category</span>
-                  </div>
-                  <p className="text-muted-foreground">{selectedTask.category}</p>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <MessageCircle className="h-4 w-4" />
-                    <span>Chat Type</span>
-                  </div>
-                  <p className="text-muted-foreground">
-                    {selectedTask.isGroup ? 'Group Chat' : 'Direct Message'}
-                  </p>
-                </div>
-              </div>
+              <div className="w-96 border-l pl-6">
+                <Tabs defaultValue="analysis" className="h-full flex flex-col">
+                  <TabsList>
+                    <TabsTrigger value="analysis" className="flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
+                      AI Analysis
+                    </TabsTrigger>
+                    <TabsTrigger value="chat" className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4" />
+                      Chat
+                    </TabsTrigger>
+                  </TabsList>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-1.5 text-sm font-medium">
-                  <Mail className="h-4 w-4" />
-                  <span>Original Message</span>
-                </div>
-                <div className="rounded-lg bg-muted p-4">
-                  <p className="text-sm whitespace-pre-wrap">{selectedTask.snippet}</p>
-                </div>
-              </div>
+                  <TabsContent value="analysis" className="flex-1 mt-6">
+                    <AIAnalysis task={selectedTask} />
+                  </TabsContent>
 
-              <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Bell className="h-4 w-4" />
-                  <span>{selectedTask.reminded ? 'Reminder sent' : 'No reminder sent'}</span>
-                </div>
-                <span>Created {formatDistanceToNow(new Date(selectedTask.timestamp))} ago</span>
+                  <TabsContent value="chat" className="flex-1 mt-6">
+                    <AIChat task={selectedTask} />
+                  </TabsContent>
+                </Tabs>
               </div>
-
-              {selectedTask.links && selectedTask.links.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 text-sm font-medium">
-                    <LinkIcon className="h-4 w-4" />
-                    <span>Related Links</span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedTask.links.map((link: string, i: number) => (
-                      <a
-                        key={i}
-                        href={link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
-                      >
-                        <LinkIcon className="h-3.5 w-3.5" />
-                        <span>Link {i + 1}</span>
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </DialogContent>
         </Dialog>
       )}
+    </div>
+  );
+}
+
+function AIAnalysis({ task }: { task: any }) {
+  const [analysis, setAnalysis] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getAnalysis = async () => {
+      setLoading(true);
+      const result = await analyzeTask(task);
+      setAnalysis(result);
+      setLoading(false);
+    };
+    getAnalysis();
+  }, [task]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="prose prose-sm dark:prose-invert max-w-none">
+      <ReactMarkdown>{analysis}</ReactMarkdown>
+    </div>
+  );
+}
+
+function AIChat({ task }: { task: any }) {
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
+    {
+      role: "assistant",
+      content: "Hi! I'm here to help you with your task. What would you like to know?",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const newMessages = [
+      ...messages,
+      { role: "user", content: input },
+    ];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+
+    const response = await chatWithAI(newMessages);
+    setMessages([...newMessages, { role: "assistant", content: response }]);
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <ScrollArea className="flex-1 pr-4">
+        <div className="space-y-4">
+          {messages.map((message, i) => (
+            <div
+              key={i}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted"
+                }`}
+              >
+                <ReactMarkdown className="prose-sm dark:prose-invert">
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-lg px-4 py-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <div className="mt-4 flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+          placeholder="Ask anything about your task..."
+          className="flex-1"
+        />
+        <Button
+          size="icon"
+          onClick={sendMessage}
+          disabled={loading || !input.trim()}
+        >
+          <Send className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }
