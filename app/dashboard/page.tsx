@@ -25,9 +25,13 @@ import {
   Send,
   Loader2,
   MessageCircle,
-  Bell
+  Bell,
+  ArrowRight,
+  CheckCircle,
+  XCircle,
+  MoreHorizontal
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -42,6 +46,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import ReactMarkdown from 'react-markdown';
 
 const container = {
@@ -133,12 +143,15 @@ function AIChat({ task }: { task: any }) {
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <ScrollArea ref={scrollRef} className="flex-1 pr-4">
+    <div className="flex flex-col h-full bg-black/20 rounded-lg p-4">
+      <ScrollArea className="flex-1 pr-4" ref={scrollRef}>
         <div className="space-y-4">
           {messages.map((message, i) => (
-            <div
+            <motion.div
               key={i}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
               className={`flex ${
                 message.role === "user" ? "justify-end" : "justify-start"
               }`}
@@ -159,10 +172,14 @@ function AIChat({ task }: { task: any }) {
                   {message.content}
                 </ReactMarkdown>
               </div>
-            </div>
+            </motion.div>
           ))}
           {loading && (
-            <div className="flex justify-start">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex justify-start"
+            >
               <div className="bg-muted rounded-2xl rounded-tl-none px-4 py-2 shadow-lg">
                 <div className="flex space-x-2">
                   <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
@@ -170,13 +187,12 @@ function AIChat({ task }: { task: any }) {
                   <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </ScrollArea>
 
-      <div className="mt-4 relative">
-        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 opacity-75 blur-lg" />
+      <div className="mt-4">
         <div className="relative flex gap-2">
           <Input
             value={input}
@@ -337,6 +353,17 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <Button variant="outline" className="h-10">
+              <Bell className="h-4 w-4 mr-2" />
+              Notifications
+            </Button>
+            <Button className="h-10">
+              <Plus className="h-4 w-4 mr-2" />
+              New Task
+            </Button>
+          </div>
         </motion.div>
         
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
@@ -432,52 +459,81 @@ export default function DashboardPage() {
             <Card className="border-none shadow-lg bg-white/5">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-xl font-semibold text-white">Priority Tasks</CardTitle>
+                <Button variant="ghost" size="sm" className="text-primary">
+                  View All <ArrowRight className="h-4 w-4 ml-2" />
+                </Button>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {urgentTasks.map((task, index) => (
-                    <Card 
-                      key={index} 
-                      className={`border-none shadow-lg backdrop-blur-lg transition-all cursor-pointer ${
-                        task.priority.toLowerCase() === 'urgent' 
-                          ? 'bg-gradient-to-br from-red-500/20 to-red-600/10 hover:from-red-500/30 hover:to-red-600/20' 
-                          : 'bg-gradient-to-br from-black/40 to-black/20 hover:from-black/60 hover:to-black/40'
-                      }`}
-                      onClick={() => setSelectedTask(task)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
-                            <AlertCircle className="h-5 w-5 text-red-500" />
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium text-white">{task.task}</h3>
-                              <Badge className={`${getPriorityBadgeColor(task.priority)}`}>
-                                {task.priority}
-                              </Badge>
+                <AnimatePresence>
+                  <div className="space-y-4">
+                    {urgentTasks.map((task, index) => (
+                      <motion.div
+                        key={task.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        transition={{ duration: 0.2, delay: index * 0.1 }}
+                      >
+                        <Card 
+                          className={`border-none shadow-lg backdrop-blur-lg transition-all cursor-pointer ${
+                            task.priority.toLowerCase() === 'urgent' 
+                              ? 'bg-gradient-to-br from-red-500/20 to-red-600/10 hover:from-red-500/30 hover:to-red-600/20' 
+                              : 'bg-gradient-to-br from-black/40 to-black/20 hover:from-black/60 hover:to-black/40'
+                          }`}
+                          onClick={() => setSelectedTask(task)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
+                                <AlertCircle className="h-5 w-5 text-red-500" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <h3 className="font-medium text-white">{task.task}</h3>
+                                  <Badge className={`${getPriorityBadgeColor(task.priority)}`}>
+                                    {task.priority}
+                                  </Badge>
+                                </div>
+                                <p className="text-sm text-white/60">From {task.from}</p>
+                              </div>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Mark as Complete
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem>
+                                    <MessageCircle className="h-4 w-4 mr-2" />
+                                    Send Message
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
-                            <p className="text-sm text-white/60">From {task.from}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm text-white/60">
-                          <div className="flex items-center gap-1.5">
-                            <Calendar className="h-4 w-4" />
-                            <span>{task.deadline}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="h-4 w-4" />
-                            <span>{task.time}</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <Tag className="h-4 w-4" />
-                            <span>{task.category}</span>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+                            <div className="flex items-center gap-4 text-sm text-white/60">
+                              <div className="flex items-center gap-1.5">
+                                <Calendar className="h-4 w-4" />
+                                <span>{task.deadline}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="h-4 w-4" />
+                                <span>{task.time}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Tag className="h-4 w-4" />
+                                <span>{task.category}</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                </AnimatePresence>
               </CardContent>
             </Card>
           </motion.div>
@@ -571,8 +627,8 @@ export default function DashboardPage() {
 
       {selectedTask && (
         <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
-          <DialogContent className="sm:max-w-[800px] h-[80vh]">
-            <DialogHeader>
+          <DialogContent className="sm:max-w-[900px] h-[85vh] p-0">
+            <DialogHeader className="p-6 pb-2">
               <DialogTitle className="text-xl flex items-center gap-2">
                 <span>Task Details</span>
                 <Badge className={`${getPriorityBadgeColor(selectedTask.priority)}`}>
@@ -580,111 +636,111 @@ export default function DashboardPage() {
                 </Badge>
               </DialogTitle>
             </DialogHeader>
-            <div className="flex h-full gap-6">
-              <div className="flex-1 overflow-y-auto">
-                <div className="space-y-6">
-                  <div className="space-y-2">
-                    <h3 className="text-lg font-medium">{selectedTask.task}</h3>
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <User className="h-4 w-4" />
-                      <span>From {selectedTask.from}</span>
-                    </div>
+            <div className="flex h-[calc(85vh-80px)] gap-6 p-6 pt-2">
+              <div className="flex-1 overflow-y-auto pr-6 space-y-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-medium">{selectedTask.task}</h3>
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <User className="h-4 w-4" />
+                    <span>From {selectedTask.from}</span>
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <Calendar className="h-4 w-4" />
-                        <span>Due Date</span>
-                      </div>
-                      <p className="text-muted-foreground">{selectedTask.deadline}</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <Calendar className="h-4 w-4" />
+                      <span>Due Date</span>
                     </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <Clock className="h-4 w-4" />
-                        <span>Due Time</span>
-                      </div>
-                      <p className="text-muted-foreground">{selectedTask.time}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <Tag className="h-4 w-4" />
-                        <span>Category</span>
-                      </div>
-                      <p className="text-muted-foreground">{selectedTask.category}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <MessageSquare className="h-4 w-4" />
-                        <span>Chat Type</span>
-                      </div>
-                      <p className="text-muted-foreground">
-                        {selectedTask.isGroup ? 'Group Chat' : 'Direct Message'}
-                      </p>
-                    </div>
+                    <p className="text-muted-foreground">{selectedTask.deadline}</p>
                   </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <Clock className="h-4 w-4" />
+                      <span>Due Time</span>
+                    </div>
+                    <p className="text-muted-foreground">{selectedTask.time}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <Tag className="h-4 w-4" />
+                      <span>Category</span>
+                    </div>
+                    <p className="text-muted-foreground">{selectedTask.category}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Chat Type</span>
+                    </div>
+                    <p className="text-muted-foreground">
+                      {selectedTask.isGroup ? 'Group Chat' : 'Direct Message'}
+                    </p>
+                  </div>
+                </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <Mail className="h-4 w-4" />
+                    <span>Original Message</span>
+                  </div>
+                  <div className="rounded-lg bg-muted p-4">
+                    <p className="text-sm whitespace-pre-wrap">{selectedTask.snippet}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{selectedTask.reminded ? 'Reminder sent' : 'No reminder sent'}</span>
+                  </div>
+                  <span>Created {formatDistanceToNow(new Date(selectedTask.timestamp))} ago</span>
+                </div>
+
+                {selectedTask.links && selectedTask.links.length > 0 && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5 text-sm font-medium">
-                      <Mail className="h-4 w-4" />
-                      <span>Original Message</span>
+                      <LinkIcon className="h-4 w-4" />
+                      <span>Related Links</span>
                     </div>
-                    <div className="rounded-lg bg-muted p-4">
-                      <p className="text-sm whitespace-pre-wrap">{selectedTask.snippet}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTask.links.map((link: string, i: number) => (
+                        <a
+                          key={i}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                        >
+                          <LinkIcon className="h-3.5 w-3.5" />
+                          <span>Link {i + 1}</span>
+                        </a>
+                      ))}
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <AlertCircle className="h-4 w-4" />
-                      <span>{selectedTask.reminded ? 'Reminder sent' : 'No reminder sent'}</span>
-                    </div>
-                    <span>Created {formatDistanceToNow(new Date(selectedTask.timestamp))} ago</span>
-                  </div>
-
-                  {selectedTask.links && selectedTask.links.length > 0 && (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 text-sm font-medium">
-                        <LinkIcon className="h-4 w-4" />
-                        <span>Related Links</span>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedTask.links.map((link: string, i: number) => (
-                          <a
-                            key={i}
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
-                          >
-                            <LinkIcon className="h-3.5 w-3.5" />
-                            <span>Link {i + 1}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
-              <div className="w-96 border-l pl-6">
+              <div className="w-[400px] border-l pl-6">
                 <Tabs defaultValue="analysis" className="h-full flex flex-col">
-                  <TabsList>
-                    <TabsTrigger value="analysis" className="flex items-center gap-2">
+                  <TabsList className="w-full">
+                    <TabsTrigger value="analysis" className="flex-1 flex items-center gap-2">
                       <Brain className="h-4 w-4" />
                       AI Analysis
                     </TabsTrigger>
-                    <TabsTrigger value="chat" className="flex items-center gap-2">
+                    <TabsTrigger value="chat" className="flex-1 flex items-center gap-2">
                       <MessageSquare className="h-4 w-4" />
                       Chat
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="analysis" className="flex-1 mt-6">
-                    <AIAnalysis task={selectedTask} />
+                  <TabsContent value="analysis" className="flex-1 mt-6 overflow-hidden">
+                    <ScrollArea className="h-full pr-4">
+                      <AIAnalysis task={selectedTask} />
+                    </ScrollArea>
                   </TabsContent>
 
-                  <TabsContent value="chat" className="flex-1 mt-6">
+                  <TabsContent value="chat" className="flex-1 mt-6 flex flex-col overflow-hidden">
                     <AIChat task={selectedTask} />
                   </TabsContent>
                 </Tabs>
