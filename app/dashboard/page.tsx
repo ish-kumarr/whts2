@@ -19,10 +19,13 @@ import {
   FileText,
   Link as LinkIcon,
   Tag,
-  User
+  User,
+  Mail,
+  MessageCircle,
+  Bell
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday } from "date-fns";
+import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import {
@@ -33,6 +36,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 
 const container = {
   hidden: { opacity: 0 },
@@ -126,6 +130,19 @@ export default function DashboardPage() {
         return 'from-yellow-500 to-yellow-600';
       default:
         return 'from-blue-500 to-blue-600';
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'urgent':
+        return 'bg-red-500/10 text-red-500 border-red-500/20';
+      case 'high':
+        return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+      case 'medium':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20';
+      default:
+        return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
     }
   };
 
@@ -275,7 +292,11 @@ export default function DashboardPage() {
                   {urgentTasks.map((task, index) => (
                     <Card 
                       key={index} 
-                      className="border-none shadow-lg bg-gradient-to-br from-black/40 to-black/20 backdrop-blur-lg hover:from-black/60 hover:to-black/40 transition-all cursor-pointer"
+                      className={`border-none shadow-lg backdrop-blur-lg transition-all cursor-pointer ${
+                        task.priority.toLowerCase() === 'urgent' 
+                          ? 'bg-gradient-to-br from-red-500/20 to-red-600/10 hover:from-red-500/30 hover:to-red-600/20' 
+                          : 'bg-gradient-to-br from-black/40 to-black/20 hover:from-black/60 hover:to-black/40'
+                      }`}
                       onClick={() => setSelectedTask(task)}
                     >
                       <CardContent className="p-4">
@@ -283,8 +304,13 @@ export default function DashboardPage() {
                           <div className="h-10 w-10 rounded-full bg-white/10 flex items-center justify-center">
                             <AlertCircle className="h-5 w-5 text-red-500" />
                           </div>
-                          <div>
-                            <h3 className="font-medium text-white">{task.task}</h3>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-white">{task.task}</h3>
+                              <Badge className={`${getPriorityBadgeColor(task.priority)}`}>
+                                {task.priority}
+                              </Badge>
+                            </div>
                             <p className="text-sm text-white/60">From {task.from}</p>
                           </div>
                         </div>
@@ -380,4 +406,120 @@ export default function DashboardPage() {
                             <div className="space-y-2">
                               {dayTasks.map((task, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                  <div className={`h-2 w-2 ro
+                                  <div className={`h-2 w-2 rounded-full bg-${getPriorityColor(task.priority)}`} />
+                                  <span className="text-sm">{task.task}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </HoverCardContent>
+                        )}
+                      </HoverCard>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </motion.div>
+
+      {selectedTask && (
+        <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
+          <DialogContent className="sm:max-w-[600px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <span>Task Details</span>
+                <Badge className={`${getPriorityBadgeColor(selectedTask.priority)}`}>
+                  {selectedTask.priority}
+                </Badge>
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-medium">{selectedTask.task}</h3>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <User className="h-4 w-4" />
+                  <span>From {selectedTask.from}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <Calendar className="h-4 w-4" />
+                    <span>Due Date</span>
+                  </div>
+                  <p className="text-muted-foreground">{selectedTask.deadline}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <Clock className="h-4 w-4" />
+                    <span>Due Time</span>
+                  </div>
+                  <p className="text-muted-foreground">{selectedTask.time}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <Tag className="h-4 w-4" />
+                    <span>Category</span>
+                  </div>
+                  <p className="text-muted-foreground">{selectedTask.category}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <MessageCircle className="h-4 w-4" />
+                    <span>Chat Type</span>
+                  </div>
+                  <p className="text-muted-foreground">
+                    {selectedTask.isGroup ? 'Group Chat' : 'Direct Message'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-sm font-medium">
+                  <Mail className="h-4 w-4" />
+                  <span>Original Message</span>
+                </div>
+                <div className="rounded-lg bg-muted p-4">
+                  <p className="text-sm whitespace-pre-wrap">{selectedTask.snippet}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Bell className="h-4 w-4" />
+                  <span>{selectedTask.reminded ? 'Reminder sent' : 'No reminder sent'}</span>
+                </div>
+                <span>Created {formatDistanceToNow(new Date(selectedTask.timestamp))} ago</span>
+              </div>
+
+              {selectedTask.links && selectedTask.links.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <LinkIcon className="h-4 w-4" />
+                    <span>Related Links</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedTask.links.map((link: string, i: number) => (
+                      <a
+                        key={i}
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm hover:bg-primary/20 transition-colors"
+                      >
+                        <LinkIcon className="h-3.5 w-3.5" />
+                        <span>Link {i + 1}</span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+    </div>
+  );
+}
