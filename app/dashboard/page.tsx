@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { fetchTasks, fetchNotes, fetchImportantMessages } from "@/lib/api";
@@ -58,6 +58,146 @@ const item = {
   hidden: { opacity: 0, y: 20 },
   show: { opacity: 1, y: 0 }
 };
+
+function AIAnalysis({ task }: { task: any }) {
+  const [analysis, setAnalysis] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const getAnalysis = async () => {
+      setLoading(true);
+      const result = await analyzeTask(task);
+      setAnalysis(result);
+      setLoading(false);
+    };
+    getAnalysis();
+  }, [task]);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full space-y-4">
+        <div className="relative">
+          <div className="absolute -inset-2 rounded-lg bg-gradient-to-r from-primary via-purple-500 to-pink-500 opacity-75 blur animate-pulse" />
+          <div className="relative bg-black rounded-lg p-4 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground animate-pulse">AI is analyzing your task...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <div className="absolute -inset-2 rounded-lg bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 opacity-75 blur-lg" />
+      <div className="relative bg-black/40 backdrop-blur-xl rounded-lg p-6">
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <ReactMarkdown>{analysis}</ReactMarkdown>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AIChat({ task }: { task: any }) {
+  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
+    {
+      role: "assistant",
+      content: "Namaste! Main aapki task ke baare mein help karne ke liye here hoon. Kya puchna chahenge?",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+
+    const newMessages = [
+      ...messages,
+      { role: "user", content: input },
+    ];
+    setMessages(newMessages);
+    setInput("");
+    setLoading(true);
+
+    const response = await chatWithAI(newMessages);
+    setMessages([...newMessages, { role: "assistant", content: response }]);
+    setLoading(false);
+  };
+
+  return (
+    <div className="flex flex-col h-full">
+      <ScrollArea ref={scrollRef} className="flex-1 pr-4">
+        <div className="space-y-4">
+          {messages.map((message, i) => (
+            <div
+              key={i}
+              className={`flex ${
+                message.role === "user" ? "justify-end" : "justify-start"
+              }`}
+            >
+              <div
+                className={`relative max-w-[80%] px-4 py-2 rounded-2xl ${
+                  message.role === "user"
+                    ? "bg-primary text-primary-foreground rounded-tr-none"
+                    : "bg-muted rounded-tl-none"
+                } shadow-lg`}
+              >
+                <div className={`absolute top-0 ${
+                  message.role === "user" ? "-right-2" : "-left-2"
+                } w-2 h-2 ${
+                  message.role === "user" ? "bg-primary" : "bg-muted"
+                }`} />
+                <ReactMarkdown className="prose-sm dark:prose-invert break-words">
+                  {message.content}
+                </ReactMarkdown>
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-muted rounded-2xl rounded-tl-none px-4 py-2 shadow-lg">
+                <div className="flex space-x-2">
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                  <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      <div className="mt-4 relative">
+        <div className="absolute -inset-2 rounded-full bg-gradient-to-r from-primary/20 via-purple-500/20 to-pink-500/20 opacity-75 blur-lg" />
+        <div className="relative flex gap-2">
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Apna question type karein..."
+            className="flex-1 bg-black/40 backdrop-blur-xl border-white/10 focus:border-primary h-12 px-4 rounded-full"
+          />
+          <Button
+            size="icon"
+            onClick={sendMessage}
+            disabled={loading || !input.trim()}
+            className="h-12 w-12 rounded-full bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg"
+          >
+            <Send className="h-5 w-5" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const [tasks, setTasks] = useState<any[]>([]);
@@ -553,115 +693,6 @@ export default function DashboardPage() {
           </DialogContent>
         </Dialog>
       )}
-    </div>
-  );
-}
-
-function AIAnalysis({ task }: { task: any }) {
-  const [analysis, setAnalysis] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const getAnalysis = async () => {
-      setLoading(true);
-      const result = await analyzeTask(task);
-      setAnalysis(result);
-      setLoading(false);
-    };
-    getAnalysis();
-  }, [task]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="prose prose-sm dark:prose-invert max-w-none">
-      <ReactMarkdown>{analysis}</ReactMarkdown>
-    </div>
-  );
-}
-
-function AIChat({ task }: { task: any }) {
-  const [messages, setMessages] = useState<{ role: string; content: string }[]>([
-    {
-      role: "assistant",
-      content: "Hi! I'm here to help you with your task. What would you like to know?",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const sendMessage = async () => {
-    if (!input.trim() || loading) return;
-
-    const newMessages = [
-      ...messages,
-      { role: "user", content: input },
-    ];
-    setMessages(newMessages);
-    setInput("");
-    setLoading(true);
-
-    const response = await chatWithAI(newMessages);
-    setMessages([...newMessages, { role: "assistant", content: response }]);
-    setLoading(false);
-  };
-
-  return (
-    <div className="flex flex-col h-full">
-      <ScrollArea className="flex-1 pr-4">
-        <div className="space-y-4">
-          {messages.map((message, i) => (
-            <div
-              key={i}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              }`}
-            >
-              <div
-                className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                  message.role === "user"
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted"
-                }`}
-              >
-                <ReactMarkdown className="prose-sm dark:prose-invert">
-                  {message.content}
-                </ReactMarkdown>
-              </div>
-            </div>
-          ))}
-          {loading && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-lg px-4 py-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-
-      <div className="mt-4 flex gap-2">
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Ask anything about your task..."
-          className="flex-1"
-        />
-        <Button
-          size="icon"
-          onClick={sendMessage}
-          disabled={loading || !input.trim()}
-        >
-          <Send className="h-4 w-4" />
-        </Button>
-      </div>
     </div>
   );
 }
